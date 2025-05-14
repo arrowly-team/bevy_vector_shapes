@@ -35,7 +35,7 @@ impl RectangleComponent {
 impl ShapeComponent for RectangleComponent {
     type Data = RectData;
 
-    fn get_data(&self, tf: &GlobalTransform, fill: &ShapeFill) -> RectData {
+    fn get_data(&self, tf: &GlobalTransform, fill: &ShapeFill) -> impl Iterator<Item = RectData> {
         let mut flags = Flags(0);
         let thickness = match fill.ty {
             FillType::Stroke(thickness, thickness_type) => {
@@ -47,7 +47,7 @@ impl ShapeComponent for RectangleComponent {
         };
         flags.set_alignment(self.alignment);
 
-        RectData {
+        std::iter::once(RectData {
             transform: tf.compute_matrix().to_cols_array_2d(),
 
             color: fill.color.to_linear().to_f32_array(),
@@ -56,7 +56,7 @@ impl ShapeComponent for RectangleComponent {
 
             size: self.size.into(),
             corner_radii: self.corner_radii.into(),
-        }
+        })
     }
 }
 

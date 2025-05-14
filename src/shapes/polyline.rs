@@ -10,46 +10,46 @@ use crate::{
     render::{Flags, ShapeComponent, ShapeData, LINE_HANDLE},
 };
 
-/// Component containing the data for drawing a line.
+/// Component containing the data for drawing a polyline.
 #[derive(Component, Reflect)]
-pub struct LineComponent {
+pub struct PolylineComponent {
     pub alignment: Alignment,
     pub cap: Cap,
 
-    /// Position to draw the start of the line in world space relative to it's transform.
-    pub start: Vec3,
-    /// Position to draw the end of the line in world space relative to it's transform.
-    pub end: Vec3,
+    /// Line strip positions to draw the polyline in world space relative to it's transform.
+    pub strip: Vec<Vec3>,
 }
 
-impl LineComponent {
-    pub fn new(config: &ShapeConfig, start: Vec3, end: Vec3) -> Self {
+impl PolylineComponent {
+    pub fn new(config: &ShapeConfig, strip: Vec<Vec3>) -> Self {
         Self {
             alignment: config.alignment,
             cap: config.cap,
 
-            start,
-            end,
+            strip,
         }
     }
 }
 
-impl Default for LineComponent {
+impl Default for PolylineComponent {
     fn default() -> Self {
         Self {
             alignment: default(),
             cap: default(),
 
-            start: default(),
-            end: default(),
+            strip: default(),
         }
     }
 }
 
-impl ShapeComponent for LineComponent {
-    type Data = LineData;
+impl ShapeComponent for PolylineComponent {
+    type Data = PolylineData;
 
-    fn get_data(&self, tf: &GlobalTransform, fill: &ShapeFill) -> impl Iterator<Item = LineData> {
+    fn get_data(
+        &self,
+        tf: &GlobalTransform,
+        fill: &ShapeFill,
+    ) -> impl Iterator<Item = PolylineData> {
         let mut flags = Flags(0);
         let thickness = match fill.ty {
             FillType::Stroke(thickness, thickness_type) => {
@@ -62,15 +62,15 @@ impl ShapeComponent for LineComponent {
         flags.set_alignment(self.alignment);
         flags.set_cap(self.cap);
 
-        std::iter::once(LineData {
+        self.strip.windows(2).map(move |l| PolylineData {
             transform: tf.compute_matrix().to_cols_array_2d(),
 
             color: fill.color.to_linear().to_f32_array(),
             thickness,
             flags: flags.0,
 
-            start: self.start,
-            end: self.end,
+            start: l[0],
+            end: l[1],
         })
     }
 }
@@ -78,7 +78,7 @@ impl ShapeComponent for LineComponent {
 /// Raw data sent to the line shader to draw a line
 #[derive(Clone, Copy, Reflect, Default, Debug, ShaderType)]
 #[repr(C)]
-pub struct LineData {
+pub struct PolylineData {
     transform: [[f32; 4]; 4],
 
     color: [f32; 4],
@@ -89,14 +89,14 @@ pub struct LineData {
     end: Vec3,
 }
 
-impl LineData {
+impl PolylineData {
     pub fn new(config: &ShapeConfig, start: Vec3, end: Vec3) -> Self {
         let mut flags = Flags(0);
         flags.set_thickness_type(config.thickness_type);
         flags.set_alignment(config.alignment);
         flags.set_cap(config.cap);
 
-        LineData {
+        PolylineData {
             transform: config.transform.compute_matrix().to_cols_array_2d(),
 
             color: config.color.to_linear().to_f32_array(),
@@ -109,8 +109,8 @@ impl LineData {
     }
 }
 
-impl ShapeData for LineData {
-    type Component = LineComponent;
+impl ShapeData for PolylineData {
+    type Component = PolylineComponent;
 
     fn vertex_layout() -> Vec<wgpu::VertexAttribute> {
         vertex_attr_array![
@@ -137,37 +137,40 @@ impl ShapeData for LineData {
     }
 }
 
-/// Extension trait for [`ShapePainter`] to enable it to draw lines.
-pub trait LinePainter {
-    fn line(&mut self, start: Vec3, end: Vec3) -> &mut Self;
+/// Extension trait for [`ShapePainter`] to enable it to draw polylines.
+pub trait PolylinePainter {
+    fn polyline(&mut self, strip: Vec<Vec3>) -> &mut Self;
 }
 
-impl<'w, 's> LinePainter for ShapePainter<'w, 's> {
-    fn line(&mut self, start: Vec3, end: Vec3) -> &mut Self {
-        self.send(LineData::new(self.config(), start, end))
+impl<'w, 's> PolylinePainter for ShapePainter<'w, 's> {
+    fn polyline(&mut self, strip: Vec<Vec3>) -> &mut Self {
+        for l in strip.windows(2) {
+            self.send(PolylineData::new(self.config(), l[0], l[1]));
+        }
+        self
     }
 }
 
-/// Extension trait for [`ShapeBundle`] to enable creation of line bundles.
-pub trait LineBundle {
-    fn line(config: &ShapeConfig, start: Vec3, end: Vec3) -> Self;
+/// Extension trait for [`ShapeBundle`] to enable creation of polyline bundles.
+pub trait PolylineBundle {
+    fn polyline(config: &ShapeConfig, strip: Vec<Vec3>) -> Self;
 }
 
-impl LineBundle for ShapeBundle<LineComponent> {
-    fn line(config: &ShapeConfig, start: Vec3, end: Vec3) -> Self {
-        let mut bundle = Self::new(config, LineComponent::new(config, start, end));
+impl PolylineBundle for ShapeBundle<PolylineComponent> {
+    fn polyline(config: &ShapeConfig, strip: Vec<Vec3>) -> Self {
+        let mut bundle = Self::new(config, PolylineComponent::new(config, strip));
         bundle.fill.ty = FillType::Stroke(config.thickness, config.thickness_type);
         bundle
     }
 }
 
-/// Extension trait for [`ShapeSpawner`] to enable spawning of line entities.
-pub trait LineSpawner<'w>: ShapeSpawner<'w> {
-    fn line(&mut self, start: Vec3, end: Vec3) -> ShapeEntityCommands;
+/// Extension trait for [`ShapeSpawner`] to enable spawning of polyline entities.
+pub trait PolylineSpawner<'w>: ShapeSpawner<'w> {
+    fn polyline(&mut self, strip: Vec<Vec3>) -> ShapeEntityCommands;
 }
 
-impl<'w, T: ShapeSpawner<'w>> LineSpawner<'w> for T {
-    fn line(&mut self, start: Vec3, end: Vec3) -> ShapeEntityCommands {
-        self.spawn_shape(ShapeBundle::line(self.config(), start, end))
+impl<'w, T: ShapeSpawner<'w>> PolylineSpawner<'w> for T {
+    fn polyline(&mut self, strip: Vec<Vec3>) -> ShapeEntityCommands {
+        self.spawn_shape(ShapeBundle::polyline(self.config(), strip))
     }
 }

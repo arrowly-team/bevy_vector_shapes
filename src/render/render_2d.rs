@@ -58,30 +58,22 @@ pub fn extract_shapes_2d<T: ShapeData>(
     materials.clear();
     canvases.clear();
 
-    shapes
-        .iter()
-        .filter_map(|(e, cp, fill, tf, vis, flags, rl)| {
-            if vis.get() {
-                Some((
-                    e,
-                    ShapePipelineMaterial::new(flags, rl),
-                    cp.get_data(tf, fill),
-                ))
-            } else {
-                None
+    for (entity, component, fill, tf, vis, flags, rl) in &shapes {
+        if vis.get() {
+            for data in component.get_data(tf, fill) {
+                let material = ShapePipelineMaterial::new(flags, rl);
+                materials.entry(material.clone()).or_default().push(entity);
+                instance_data.insert(
+                    entity,
+                    ShapeInstance {
+                        material,
+                        origin: Vec3::ZERO,
+                        data,
+                    },
+                );
             }
-        })
-        .for_each(|(entity, material, data)| {
-            materials.entry(material.clone()).or_default().push(entity);
-            instance_data.insert(
-                entity,
-                ShapeInstance {
-                    material,
-                    origin: Vec3::ZERO,
-                    data,
-                },
-            );
-        });
+        }
+    }
 
     if let Some(iter) = storage.get::<T>(ShapePipelineType::Shape2d) {
         iter.cloned().for_each(|mut instance| {

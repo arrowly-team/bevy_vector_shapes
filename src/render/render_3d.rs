@@ -62,33 +62,27 @@ pub fn extract_shapes_3d<T: ShapeData>(
     materials.clear();
     canvases.clear();
 
-    entities
-        .iter()
-        .filter_map(|(e, cp, fill, tf, vis, flags, rl, or)| {
-            if vis.get() {
-                // find global origin of shape
-                let local_origin = or.map(|or| or.0).unwrap_or(Vec3::ZERO);
-                let origin = tf.transform_point(local_origin);
+    for (entity, component, fill, tf, vis, flags, rl, or) in &entities {
+        if vis.get() {
+            // find global origin of shape
+            let local_origin = or.map(|or| or.0).unwrap_or(Vec3::ZERO);
+            let origin = tf.transform_point(local_origin);
 
-                Some((
-                    e,
-                    ShapeInstance {
-                        material: ShapePipelineMaterial::new(flags, rl),
-                        origin,
-                        data: cp.get_data(tf, fill),
-                    },
-                ))
-            } else {
-                None
+            for data in component.get_data(tf, fill) {
+                let instance = ShapeInstance {
+                    material: ShapePipelineMaterial::new(flags, rl),
+                    origin,
+                    data,
+                };
+
+                materials
+                    .entry(instance.material.clone())
+                    .or_default()
+                    .push(entity);
+                instance_data.insert(entity, instance);
             }
-        })
-        .for_each(|(entity, instance)| {
-            materials
-                .entry(instance.material.clone())
-                .or_default()
-                .push(entity);
-            instance_data.insert(entity, instance);
-        });
+        }
+    }
 
     if let Some(iter) = storage.get::<T>(ShapePipelineType::Shape3d) {
         iter.cloned().for_each(|mut instance| {

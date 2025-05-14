@@ -84,6 +84,17 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
                     );
                 }
             }
+            15 => {
+                painter.thickness = 0.5;
+                painter.set_color(MIDNIGHT_BLUE.pastel());
+                painter.cap = Cap::Round;
+
+                painter.polyline(vec![
+                    Vec3::new(-1.0, 1.0, 0.0),
+                    Vec3::new(0.0, 0.0, 0.0),
+                    Vec3::new(1.0, 1.0, 0.0),
+                ]);
+            }
             // Rect examples
             1 => {
                 painter.set_color(SEA_GREEN.pastel() * 0.7);

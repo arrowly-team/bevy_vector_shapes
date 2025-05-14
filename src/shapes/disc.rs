@@ -61,7 +61,7 @@ impl DiscComponent {
 impl ShapeComponent for DiscComponent {
     type Data = DiscData;
 
-    fn get_data(&self, tf: &GlobalTransform, fill: &ShapeFill) -> DiscData {
+    fn get_data(&self, tf: &GlobalTransform, fill: &ShapeFill) -> impl Iterator<Item = DiscData> {
         let mut flags = Flags(0);
         let thickness = match fill.ty {
             FillType::Stroke(thickness, thickness_type) => {
@@ -75,7 +75,7 @@ impl ShapeComponent for DiscComponent {
         flags.set_cap(self.cap);
         flags.set_arc(self.arc as u32);
 
-        DiscData {
+        std::iter::once(DiscData {
             transform: tf.compute_matrix().to_cols_array_2d(),
 
             color: fill.color.to_linear().to_f32_array(),
@@ -87,7 +87,7 @@ impl ShapeComponent for DiscComponent {
             end_angle: self.end_angle,
 
             padding: default(),
-        }
+        })
     }
 }
 

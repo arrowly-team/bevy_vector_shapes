@@ -40,7 +40,11 @@ impl TriangleComponent {
 impl ShapeComponent for TriangleComponent {
     type Data = TriangleData;
 
-    fn get_data(&self, tf: &GlobalTransform, fill: &ShapeFill) -> TriangleData {
+    fn get_data(
+        &self,
+        tf: &GlobalTransform,
+        fill: &ShapeFill,
+    ) -> impl Iterator<Item = TriangleData> {
         let mut flags = Flags(0);
         let thickness = match fill.ty {
             FillType::Stroke(thickness, thickness_type) => {
@@ -52,7 +56,7 @@ impl ShapeComponent for TriangleComponent {
         };
         flags.set_alignment(self.alignment);
 
-        TriangleData {
+        std::iter::once(TriangleData {
             transform: tf.compute_matrix().to_cols_array_2d(),
 
             color: fill.color.to_linear().to_f32_array(),
@@ -67,7 +71,7 @@ impl ShapeComponent for TriangleComponent {
             roundness: self.roundness,
 
             padding: default(),
-        }
+        })
     }
 }
 

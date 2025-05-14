@@ -46,7 +46,7 @@ impl RegularPolygonComponent {
 impl ShapeComponent for RegularPolygonComponent {
     type Data = NgonData;
 
-    fn get_data(&self, tf: &GlobalTransform, fill: &ShapeFill) -> NgonData {
+    fn get_data(&self, tf: &GlobalTransform, fill: &ShapeFill) -> impl Iterator<Item = NgonData> {
         let mut flags = Flags(0);
         let thickness = match fill.ty {
             FillType::Stroke(thickness, thickness_type) => {
@@ -58,7 +58,7 @@ impl ShapeComponent for RegularPolygonComponent {
         };
         flags.set_alignment(self.alignment);
 
-        NgonData {
+        std::iter::once(NgonData {
             transform: tf.compute_matrix().to_cols_array_2d(),
 
             color: fill.color.to_linear().to_f32_array(),
@@ -70,7 +70,7 @@ impl ShapeComponent for RegularPolygonComponent {
             roundness: self.roundness,
 
             padding: default(),
-        }
+        })
     }
 }
 

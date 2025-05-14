@@ -22,5 +22,5 @@ fn setup(mut commands: Commands) {
 
 fn draw_gallery(time: Res<Time>, mut painter: ShapePainter) {
     painter.scale(Vec3::ONE * 34.0);
-    gallery(painter, time.elapsed_secs(), 0..15);
+    gallery(painter, time.elapsed_secs(), 0..16);
 }

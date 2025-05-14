@@ -8,6 +8,9 @@ pub use disc::*;
 mod line;
 pub use line::*;
 
+mod polyline;
+pub use polyline::*;
+
 mod rectangle;
 pub use rectangle::*;
 

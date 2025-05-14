@@ -92,6 +92,7 @@ impl Plugin for Shape2dPlugin {
             .add_plugins(PainterPlugin)
             .add_plugins(ShapeRenderPlugin)
             .add_plugins(ShapeTypePlugin::<LineComponent>::default())
+            .add_plugins(ShapeTypePlugin::<PolylineComponent>::default())
             .add_plugins(ShapeTypePlugin::<DiscComponent>::default())
             .add_plugins(ShapeTypePlugin::<RectangleComponent>::default())
             .add_plugins(ShapeTypePlugin::<RegularPolygonComponent>::default())
